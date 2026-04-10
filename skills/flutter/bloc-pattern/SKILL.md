@@ -13,7 +13,7 @@ Apply when creating or modifying state management using the BLoC/Cubit pattern i
 ## Instructions
 
 1. **Cubit vs BLoC**: Use `Cubit` for simple state, `Bloc` for event-driven flows.
-2. **State classes**: Use `freezed` or sealed classes for states. Always include `initial`, `loading`, `loaded`, and `error` states.
+2. **State classes**: Use `freezed` with a single state class and an `ApiStatus` enum (`initial`, `loading`, `success`, `error`). Freezed auto-generates `copyWith` and equality.
 3. **Naming convention**:
    - Cubit: `FeatureNameCubit` → `FeatureNameState`
    - Bloc: `FeatureNameBloc` → `FeatureNameEvent` / `FeatureNameState`
@@ -34,36 +34,60 @@ Apply when creating or modifying state management using the BLoC/Cubit pattern i
 
 ## Examples
 
+### ApiStatus Enum
+
+```dart
+enum ApiStatus { initial, loading, success, error }
+```
+
+### State Class
+
+```dart
+@freezed
+class UserProfileState with _$UserProfileState {
+  const factory UserProfileState({
+    @Default(ApiStatus.initial) ApiStatus status,
+    User? user,
+    String? errorMessage,
+  }) = _UserProfileState;
+}
+```
+
 ### Cubit
 
 ```dart
 class UserProfileCubit extends Cubit<UserProfileState> {
-  UserProfileCubit(this._repo) : super(const UserProfileState.initial());
+  UserProfileCubit(this._repo) : super(const UserProfileState());
 
   final UserRepository _repo;
 
   Future<void> loadProfile(String userId) async {
-    emit(const UserProfileState.loading());
+    emit(state.copyWith(status: ApiStatus.loading));
     try {
       final user = await _repo.getUser(userId);
-      emit(UserProfileState.loaded(user));
+      emit(state.copyWith(status: ApiStatus.success, user: user));
     } catch (e) {
-      emit(UserProfileState.error(e.toString()));
+      emit(state.copyWith(
+        status: ApiStatus.error,
+        errorMessage: e.toString(),
+      ));
     }
   }
 }
 ```
 
-### State with Freezed
+### Widget Usage
 
 ```dart
-@freezed
-class UserProfileState with _$UserProfileState {
-  const factory UserProfileState.initial() = _Initial;
-  const factory UserProfileState.loading() = _Loading;
-  const factory UserProfileState.loaded(User user) = _Loaded;
-  const factory UserProfileState.error(String message) = _Error;
-}
+BlocBuilder<UserProfileCubit, UserProfileState>(
+  builder: (context, state) {
+    return switch (state.status) {
+      ApiStatus.initial || ApiStatus.loading => const LoadingIndicator(),
+      ApiStatus.success => UserProfileView(user: state.user!),
+      ApiStatus.error => ErrorView(message: state.errorMessage),
+    };
+  },
+)
 ```
 
 ## Anti-patterns
