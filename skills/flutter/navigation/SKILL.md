@@ -191,3 +191,14 @@ class _SetupFlowState extends State<SetupFlow> {
   }
 }
 ```
+
+## Resources
+
+- https://docs.flutter.dev/ui/navigation
+- https://docs.flutter.dev/ui/navigation/deep-linking
+- https://docs.flutter.dev/cookbook/navigation/navigation-basics
+- https://docs.flutter.dev/cookbook/navigation/named-routes
+- https://docs.flutter.dev/cookbook/navigation/passing-data
+- https://docs.flutter.dev/cookbook/navigation/navigate-with-arguments
+- https://docs.flutter.dev/cookbook/effects/nested-nav
+- https://docs.flutter.dev/learn/tutorial/navigation

@@ -163,3 +163,17 @@ void main() {
   });
 }
 ```
+
+## Resources
+
+- https://docs.flutter.dev/testing/overview
+- https://docs.flutter.dev/testing
+- https://docs.flutter.dev/testing/integration-tests
+- https://docs.flutter.dev/testing/testing-plugins
+- https://docs.flutter.dev/cookbook/testing/unit/introduction
+- https://docs.flutter.dev/cookbook/testing/widget/introduction
+- https://docs.flutter.dev/cookbook/testing/widget/finders
+- https://docs.flutter.dev/cookbook/testing/integration/introduction
+- https://docs.flutter.dev/app-architecture/case-study/testing
+- https://docs.flutter.dev/app-architecture/concepts
+- https://docs.flutter.dev/app-architecture/recommendations

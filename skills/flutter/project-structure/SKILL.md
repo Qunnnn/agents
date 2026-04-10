@@ -46,3 +46,11 @@ Apply when creating new features, modules, or navigating the codebase in a modul
 - ❌ Business logic in widgets
 - ❌ Monolithic files with `part` directives for non-generated code
 - ❌ Deeply nested widget trees without extraction
+
+## Resources
+
+- https://docs.flutter.dev/app-architecture
+- https://docs.flutter.dev/app-architecture/concepts
+- https://docs.flutter.dev/app-architecture/guide
+- https://docs.flutter.dev/app-architecture/recommendations
+- https://docs.flutter.dev/resources/architectural-overview

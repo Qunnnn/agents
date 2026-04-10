@@ -164,3 +164,15 @@ class User {
   Map<String, dynamic> toJson() => _$UserToJson(this);
 }
 ```
+
+## Resources
+
+- https://docs.flutter.dev/data-and-backend/networking
+- https://docs.flutter.dev/data-and-backend/serialization/json
+- https://docs.flutter.dev/cookbook/networking/fetch-data
+- https://docs.flutter.dev/cookbook/networking/send-data
+- https://docs.flutter.dev/cookbook/networking/update-data
+- https://docs.flutter.dev/cookbook/networking/delete-data
+- https://docs.flutter.dev/cookbook/networking/background-parsing
+- https://docs.flutter.dev/get-started/fundamentals/networking
+- https://docs.flutter.dev/release/breaking-changes/network-policy-ios-android

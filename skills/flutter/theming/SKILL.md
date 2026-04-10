@@ -149,3 +149,17 @@ Row(
   ],
 )
 ```
+
+## Resources
+
+- https://docs.flutter.dev/cookbook/design/themes
+- https://docs.flutter.dev/ui/design
+- https://docs.flutter.dev/ui/widgets/styling
+- https://docs.flutter.dev/release/breaking-changes/material-3-migration
+- https://docs.flutter.dev/release/breaking-changes/material-3-default
+- https://docs.flutter.dev/release/breaking-changes/component-theme-normalization
+- https://docs.flutter.dev/release/breaking-changes/component-theme-normalization-updates
+- https://docs.flutter.dev/release/breaking-changes/buttons
+- https://docs.flutter.dev/release/breaking-changes/theme-data-accent-properties
+- https://docs.flutter.dev/release/breaking-changes/appbar-theme-color
+- https://docs.flutter.dev/ui/adaptive-responsive/idioms

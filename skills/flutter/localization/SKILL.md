@@ -59,3 +59,11 @@ Text(context.l10n.gasFeeValue(fee.value, fee.unit))
 - ❌ Mismatched parameter order between `.arb` definition and call-site
 - ❌ Adding keys to only one locale file
 - ❌ Using string interpolation instead of ARB placeholders
+
+## Resources
+
+- https://docs.flutter.dev/ui/internationalization
+- https://docs.flutter.dev/release/breaking-changes/flutter-generate-i10n-source
+- https://docs.flutter.dev/release/breaking-changes/material-localized-strings
+- https://docs.flutter.dev/release/breaking-changes/text-field-material-localizations
+- https://docs.flutter.dev/release/breaking-changes/cupertino-tab-bar-localizations

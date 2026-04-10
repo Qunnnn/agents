@@ -139,3 +139,12 @@ class WorkerManager {
   }
 }
 ```
+
+## Resources
+
+- https://docs.flutter.dev/perf/isolates
+- https://docs.flutter.dev/get-started/fundamentals/dart
+- https://docs.flutter.dev/resources/architectural-overview
+- https://docs.flutter.dev/flutter-for/dart-swift-concurrency
+- https://docs.flutter.dev/data-and-backend/serialization/json
+- https://docs.flutter.dev/resources/bootstrap-into-dart

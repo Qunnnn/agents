@@ -96,3 +96,12 @@ BlocBuilder<UserProfileCubit, UserProfileState>(
 - ❌ Using `BlocBuilder` when only one field is needed (use `BlocSelector`)
 - ❌ Giant monolithic blocs — split by feature
 - ❌ Putting navigation logic inside blocs (use `BlocListener`)
+
+## Resources
+
+- https://bloclibrary.dev/getting-started
+- https://bloclibrary.dev/bloc-concepts
+- https://bloclibrary.dev/architecture
+- https://pub.dev/packages/flutter_bloc
+- https://pub.dev/packages/freezed
+- https://docs.flutter.dev/data-and-backend/state-mgmt/options
