@@ -1,0 +1,22 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Secrets (never commit API keys)
+.env
+.env.local
+*.pem
+*.key
+
+# Antigravity local data
+.gemini/antigravity/
+
+# Node (if using any tooling)
+node_modules/
