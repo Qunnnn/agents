@@ -30,26 +30,45 @@ Skills are organized by domain under `skills/`:
 
 | Category | Path | Skills |
 |----------|------|--------|
-| **Flutter** | `skills/flutter/` | `bloc-pattern`, `concurrency`, `http-and-json`, `localization`, `navigation`, `project-structure`, `testing`, `theming` |
+| **Flutter** | `skills/flutter/` | `accessibility`, `animations`, `bloc-pattern`, `building-forms`, `building-layouts`, `caching-data`, `concurrency`, `databases`, `http-and-json`, `localization`, `navigation`, `project-structure`, `reducing-app-size`, `testing`, `theming` |
 | **Go** | `skills/go/` | `api-handler` |
-| **General** | `skills/general/` | `error-handling`, `using-skills` |
+| **General** | `skills/general/` | `brainstorming`, `dispatching-parallel-agents`, `executing-plans`, `finishing-a-development-branch`, `systematic-debugging`, `using-skills`, `verification-before-completion`, `writing-plans`, `writing-skills` |
 | **DevOps** | `skills/devops/` | `docker` |
 
 ### Matching Skills to Tasks
 
 ```
-User wants to...              → Check skill
-────────────────────────────────────────────────────
-Build Flutter UI/feature      → flutter/project-structure, flutter/theming
-Add state management          → flutter/bloc-pattern
-Make API calls                → flutter/http-and-json
-Add translations              → flutter/localization
-Set up routing                → flutter/navigation
-Write Flutter tests           → flutter/testing
-Handle async/isolates         → flutter/concurrency
-Write Go API endpoints        → go/api-handler
-Handle errors                 → general/error-handling
-Containerize a service        → devops/docker
+User wants to...                     → Check skill
+─────────────────────────────────────────────────────────────
+WORKFLOW & PROCESS
+Design a new feature                 → general/brainstorming
+Create an implementation plan        → general/writing-plans
+Execute a plan step-by-step          → general/executing-plans
+Finish and merge a feature branch    → general/finishing-a-development-branch
+Verify work before claiming done     → general/verification-before-completion
+Delegate multiple independent tasks  → general/dispatching-parallel-agents
+Debug a problem                      → general/systematic-debugging
+Create or edit a skill               → general/writing-skills
+
+FLUTTER DEVELOPMENT
+Build Flutter UI/feature             → flutter/project-structure, flutter/theming
+Add state management                 → flutter/bloc-pattern
+Make API calls                       → flutter/http-and-json
+Add translations                     → flutter/localization
+Set up routing                       → flutter/navigation
+Write Flutter tests                  → flutter/testing
+Handle async/isolates                → flutter/concurrency
+Build form UIs                       → flutter/building-forms
+Build responsive layouts             → flutter/building-layouts
+Add animations                       → flutter/animations
+Implement accessibility              → flutter/accessibility
+Add data caching                     → flutter/caching-data
+Work with databases                  → flutter/databases
+Reduce app size                      → flutter/reducing-app-size
+
+OTHER
+Write Go API endpoints               → go/api-handler
+Containerize a service               → devops/docker
 ```
 
 ### Skill Format
@@ -73,6 +92,16 @@ Read the full skill before acting. Don't skim or assume you know the content.
 6. If no skill matches → proceed with your best judgment
 ```
 
+## Skill Priority
+
+When multiple skills could apply, use this order:
+
+1. **Process skills first** (brainstorming, debugging) — these determine HOW to approach the task
+2. **Implementation skills second** (bloc-pattern, http-and-json) — these guide execution
+
+"Let's build X" → brainstorming first, then implementation skills.
+"Fix this bug" → systematic-debugging first, then domain-specific skills.
+
 ## Complementary Resources
 
 Beyond skills, this repository also provides:
@@ -90,7 +119,7 @@ Check `rules/` when you need project conventions. Use `prompts/` for structured 
 Skills are platform-agnostic markdown. To use them in your AI tool:
 
 | Platform | How to Load Skills |
-|----------|--------------------|
+|----------|-------------------|
 | **Antigravity** | Copy to `.agents/skills/` in your project |
 | **Cursor** | Reference in `.cursorrules` or paste as context |
 | **Copilot** | Reference in `AGENTS.md` or include as context |
@@ -107,6 +136,8 @@ These thoughts mean STOP — you're skipping skills:
 | "Let me just write code first" | Read the skill first — it prevents rework |
 | "I'll check skills later" | Skills shape HOW you work. Check before starting |
 | "No skill matches exactly" | Partial matches still provide useful patterns |
+| "I need more context first" | Skill check comes BEFORE gathering context |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first |
 
 ## Anti-patterns
 
@@ -115,3 +146,4 @@ These thoughts mean STOP — you're skipping skills:
 - ❌ Ignoring skills because the task "seems simple"
 - ❌ Following a skill that contradicts the user's explicit instructions
 - ❌ Using skills from one domain (e.g., Flutter) when working in another (e.g., Go) without verifying applicability
+- ❌ Summarizing a skill's workflow without reading the full content
