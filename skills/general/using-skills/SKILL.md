@@ -1,149 +1,95 @@
 ---
-tags: [meta, workflow, skill-discovery]
-applies-to: [antigravity, cursor, copilot, gemini]
-level: project
+name: using-skills
+description: Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
 ---
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## How to Access Skills
+
+**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+
+**In other environments:** Check your platform's documentation for how skills are loaded.
 
 # Using Skills
 
-## Context
-
-Use at the start of any conversation or task. This skill establishes how to discover, load, and apply the right skills from this repository before taking any action.
-
 ## The Rule
 
-**Check for relevant skills BEFORE any response or action.** If there's even a small chance a skill applies to your current task, read and follow it. If the skill turns out to be irrelevant, move on — but always check first.
+**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
 
-## Instruction Priority
+```dot
+digraph skill_flow {
+    "User message received" [shape=doublecircle];
+    "About to EnterPlanMode?" [shape=doublecircle];
+    "Already brainstormed?" [shape=diamond];
+    "Invoke brainstorming skill" [shape=box];
+    "Might any skill apply?" [shape=diamond];
+    "Invoke Skill tool" [shape=box];
+    "Announce: 'Using [skill] to [purpose]'" [shape=box];
+    "Has checklist?" [shape=diamond];
+    "Create TodoWrite todo per item" [shape=box];
+    "Follow skill exactly" [shape=box];
+    "Respond (including clarifications)" [shape=doublecircle];
 
-When instructions conflict, follow this precedence:
+    "About to EnterPlanMode?" -> "Already brainstormed?";
+    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
+    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
+    "Invoke brainstorming skill" -> "Might any skill apply?";
 
-1. **User's explicit instructions** (AGENTS.md, GEMINI.md, `.cursorrules`, direct requests) — highest priority
-2. **Skills from this repository** — override default AI behavior where they apply
-3. **Default AI system prompt** — lowest priority
-
-## How to Find Skills
-
-### Skill Registry
-
-Skills are organized by domain under `skills/`:
-
-| Category | Path | Skills |
-|----------|------|--------|
-| **Flutter** | `skills/flutter/` | `accessibility`, `animations`, `bloc-pattern`, `building-forms`, `building-layouts`, `caching-data`, `concurrency`, `databases`, `http-and-json`, `localization`, `navigation`, `project-structure`, `reducing-app-size`, `testing`, `theming` |
-| **Go** | `skills/go/` | `api-handler` |
-| **General** | `skills/general/` | `brainstorming`, `dispatching-parallel-agents`, `executing-plans`, `finishing-a-development-branch`, `systematic-debugging`, `using-skills`, `verification-before-completion`, `writing-plans`, `writing-skills` |
-| **DevOps** | `skills/devops/` | `docker` |
-
-### Matching Skills to Tasks
-
-```
-User wants to...                     → Check skill
-─────────────────────────────────────────────────────────────
-WORKFLOW & PROCESS
-Design a new feature                 → general/brainstorming
-Create an implementation plan        → general/writing-plans
-Execute a plan step-by-step          → general/executing-plans
-Finish and merge a feature branch    → general/finishing-a-development-branch
-Verify work before claiming done     → general/verification-before-completion
-Delegate multiple independent tasks  → general/dispatching-parallel-agents
-Debug a problem                      → general/systematic-debugging
-Create or edit a skill               → general/writing-skills
-
-FLUTTER DEVELOPMENT
-Build Flutter UI/feature             → flutter/project-structure, flutter/theming
-Add state management                 → flutter/bloc-pattern
-Make API calls                       → flutter/http-and-json
-Add translations                     → flutter/localization
-Set up routing                       → flutter/navigation
-Write Flutter tests                  → flutter/testing
-Handle async/isolates                → flutter/concurrency
-Build form UIs                       → flutter/building-forms
-Build responsive layouts             → flutter/building-layouts
-Add animations                       → flutter/animations
-Implement accessibility              → flutter/accessibility
-Add data caching                     → flutter/caching-data
-Work with databases                  → flutter/databases
-Reduce app size                      → flutter/reducing-app-size
-
-OTHER
-Write Go API endpoints               → go/api-handler
-Containerize a service               → devops/docker
+    "User message received" -> "Might any skill apply?";
+    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
+    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
+    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
+    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
+    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
+    "Has checklist?" -> "Follow skill exactly" [label="no"];
+    "Create TodoWrite todo per item" -> "Follow skill exactly";
+}
 ```
 
-### Skill Format
+## Red Flags
 
-Each skill is a standalone `SKILL.md` with:
-- **Context** — When to apply the skill
-- **Instructions** — Step-by-step guidance
-- **Examples** — Concrete input → output
-- **Anti-patterns** — What to avoid
+These thoughts mean STOP—you're rationalizing:
 
-Read the full skill before acting. Don't skim or assume you know the content.
-
-## Workflow
-
-```
-1. Receive task
-2. Identify which domain(s) the task touches
-3. Check the skill registry above for matching skills
-4. Read matching SKILL.md files
-5. Follow the skill instructions as you work
-6. If no skill matches → proceed with your best judgment
-```
+| Thought                             | Reality                                                |
+|-------------------------------------|--------------------------------------------------------|
+| "This is just a simple question"    | Questions are tasks. Check for skills.                 |
+| "I need more context first"         | Skill check comes BEFORE clarifying questions.         |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first.           |
+| "I can check git/files quickly"     | Files lack conversation context. Check for skills.     |
+| "Let me gather information first"   | Skills tell you HOW to gather information.             |
+| "This doesn't need a formal skill"  | If a skill exists, use it.                             |
+| "I remember this skill"             | Skills evolve. Read current version.                   |
+| "This doesn't count as a task"      | Action = task. Check for skills.                       |
+| "The skill is overkill"             | Simple things become complex. Use it.                  |
+| "I'll just do this one thing first" | Check BEFORE doing anything.                           |
+| "This feels productive"             | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means"            | Knowing the concept ≠ using the skill. Invoke it.      |
 
 ## Skill Priority
 
 When multiple skills could apply, use this order:
 
-1. **Process skills first** (brainstorming, debugging) — these determine HOW to approach the task
-2. **Implementation skills second** (bloc-pattern, http-and-json) — these guide execution
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
 
 "Let's build X" → brainstorming first, then implementation skills.
-"Fix this bug" → systematic-debugging first, then domain-specific skills.
+"Fix this bug" → debugging first, then domain-specific skills.
 
-## Complementary Resources
+## Skill Types
 
-Beyond skills, this repository also provides:
+**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
 
-| Resource | Path | Purpose |
-|----------|------|---------|
-| **Rules** | `rules/` | Project-wide conventions (Flutter, Go, general) |
-| **Prompts** | `prompts/` | Reusable prompt snippets (code-review, debugging, refactoring) |
-| **Templates** | `templates/` | Ready-to-use configs (Antigravity, Cursor, Copilot, Gemini) |
+**Flexible** (patterns): Adapt principles to context.
 
-Check `rules/` when you need project conventions. Use `prompts/` for structured review/debug workflows.
+The skill itself tells you which.
 
-## Platform Adaptation
+## User Instructions
 
-Skills are platform-agnostic markdown. To use them in your AI tool:
-
-| Platform | How to Load Skills |
-|----------|-------------------|
-| **Antigravity** | Copy to `.agents/skills/` in your project |
-| **Cursor** | Reference in `.cursorrules` or paste as context |
-| **Copilot** | Reference in `AGENTS.md` or include as context |
-| **Gemini CLI** | Reference in `GEMINI.md` or activate via `activate_skill` |
-
-## Red Flags
-
-These thoughts mean STOP — you're skipping skills:
-
-| Thought | Reality |
-|---------|---------|
-| "This is too simple for a skill" | Simple tasks still benefit from consistent patterns |
-| "I already know Flutter/Go patterns" | Skills encode THIS project's conventions, not generic ones |
-| "Let me just write code first" | Read the skill first — it prevents rework |
-| "I'll check skills later" | Skills shape HOW you work. Check before starting |
-| "No skill matches exactly" | Partial matches still provide useful patterns |
-| "I need more context first" | Skill check comes BEFORE gathering context |
-| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first |
-
-## Anti-patterns
-
-- ❌ Skipping skill discovery and jumping straight to code
-- ❌ Assuming you know a skill's content without re-reading it
-- ❌ Ignoring skills because the task "seems simple"
-- ❌ Following a skill that contradicts the user's explicit instructions
-- ❌ Using skills from one domain (e.g., Flutter) when working in another (e.g., Go) without verifying applicability
-- ❌ Summarizing a skill's workflow without reading the full content
+Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
