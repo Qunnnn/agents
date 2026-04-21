@@ -14,9 +14,12 @@ level: project
 - [Workflow: Setting Up Dio](#workflow-setting-up-dio)
 - [Workflow: Defining API with Retrofit](#workflow-defining-api-with-retrofit)
 - [Workflow: Implementing Interceptors](#workflow-implementing-interceptors)
-- [Workflow: Implementing JSON Serialization](#workflow-implementing-json-serialization)
+- [Workflow: Data Models & Domain Entities](#workflow-data-models--domain-entities)
 - [Workflow: Error Handling](#workflow-error-handling)
+- [Workflow: Functional Error Handling (Either + fpdart)](#workflow-functional-error-handling-either--fpdart)
 - [Examples](#examples)
+- [Anti-patterns](#anti-patterns)
+- [Resources](#resources)
 
 ## Core Guidelines
 - **Use Dio** as the HTTP client — never use `dart:io` `HttpClient` or `package:http` directly. Dio provides interceptors, cancellation, timeouts, and FormData out of the box.
@@ -35,6 +38,8 @@ level: project
 | `retrofit_generator` | Code generation for Retrofit | Dev |
 | `json_annotation` | JSON serialization annotations | Runtime |
 | `json_serializable` | JSON serialization code generation | Dev |
+| `freezed_annotation` | Annotations for Freezed (used in Entities) | Runtime |
+| `freezed` | Code generation for immutable classes (used in Entities) | Dev |
 | `build_runner` | Runs code generators | Dev |
 
 ## Workflow: Setting Up Dio
@@ -153,16 +158,25 @@ class TokenRefreshInterceptor extends QueuedInterceptor {
 }
 ```
 
-## Workflow: Implementing JSON Serialization
+## Workflow: Data Models & Domain Entities
 
-Use code generation with `json_serializable` for all production models.
+Distinguish between **Data Models** (Data layer) and **Domain Entities** (Domain layer) for a clean architecture.
 
-- [ ] Add dependencies: `json_annotation` (runtime) and `json_serializable`, `build_runner` (dev).
-- [ ] Import `json_annotation.dart` in the model file.
-- [ ] Add the `part 'model_name.g.dart';` directive.
-- [ ] Annotate the class with `@JsonSerializable()`. Use `explicitToJson: true` for nested models.
-- [ ] Define the `fromJson` factory and `toJson` method delegating to generated functions.
-- [ ] Run: `dart run build_runner build --delete-conflicting-outputs`.
+### Data Models (Data Layer)
+Use `json_serializable` without `freezed` for models that interact with the API. This keeps the data layer lightweight and prevents overkill for simple DTOs (Data Transfer Objects).
+
+- [ ] Add dependencies: `json_annotation` (runtime) and `json_serializable` (dev).
+- [ ] Annotate the class with `@JsonSerializable()`.
+- [ ] Use `explicitToJson: true` for nested models.
+- [ ] Define `fromJson` and `toJson` delegating to generated functions.
+- [ ] Add a mapper method (e.g., `toEntity()`) to convert the model to a domain entity.
+
+### Domain Entities (Domain Layer)
+Use `freezed` for domain entities to benefit from immutability, union types, and built-in `copyWith`.
+
+- [ ] Add dependencies: `freezed_annotation` (runtime) and `freezed` (dev).
+- [ ] Annotate the class with `@freezed`.
+- [ ] **NEVER** add `fromJson` or `toJson` to domain entities. They should be completely decoupled from the data layer's serialization logic. Data conversion should only happen via mappers in the data layer (e.g., `UserModel.toEntity()`).
 
 > **Important:** Retrofit requires a `factory Model.fromJson(Map<String, dynamic> json)` on every response model for automatic type conversion.
 
@@ -185,6 +199,62 @@ Use code generation with `json_serializable` for all production models.
 | `badCertificate` | SSL certificate issue |
 | `unknown` | Unexpected error |
 
+## Workflow: Functional Error Handling (Either + fpdart)
+
+For more robust and explicit error handling, use the functional programming approach with `fpdart`. This replaces the `try-catch` pattern with a type-safe `Either<Failure, T>` return type.
+
+- [ ] Add `fpdart` to `pubspec.yaml`.
+- [ ] Define a sealed `Failure` class hierarchy.
+- [ ] Centralize error mapping from `DioException` to `Failure`.
+- [ ] Use `TaskEither` or a generic request wrapper to convert API calls.
+
+### Failure Hierarchy
+
+```dart
+sealed class Failure {
+  final String message;
+  const Failure(this.message);
+}
+
+class ServerFailure extends Failure {
+  final int? statusCode;
+  const ServerFailure(super.message, {this.statusCode});
+}
+
+class ConnectionFailure extends Failure {
+  const ConnectionFailure() : super('No Internet Connection');
+}
+```
+
+### Repository Implementation with Either
+
+```dart
+class UserRepository {
+  final UserApi _api;
+  final DioClient _dioClient; // Contains centralized mapping
+
+  UserRepository(this._api, this._dioClient);
+
+  Future<Either<Failure, UserEntity>> getUser(String id) async {
+    return _dioClient.request(() async {
+      final model = await _api.getUser(id);
+      return model.toEntity();
+    });
+  }
+}
+```
+
+### UI Consumption
+
+```dart
+final result = await repository.getUser(id);
+
+result.match(
+  (failure) => showError(failure.message),
+  (user) => displayUser(user),
+);
+```
+
 ## Examples
 
 ### Full API Client with Retrofit
@@ -201,16 +271,16 @@ abstract class UserApi {
   factory UserApi(Dio dio, {String? baseUrl}) = _UserApi;
 
   @GET('/users')
-  Future<List<User>> getUsers();
+  Future<List<UserModel>> getUsers();
 
   @GET('/users/{id}')
-  Future<User> getUser(@Path('id') String id);
+  Future<UserModel> getUser(@Path('id') String id);
 
   @POST('/users')
-  Future<User> createUser(@Body() CreateUserRequest request);
+  Future<UserModel> createUser(@Body() CreateUserRequest request);
 
   @PUT('/users/{id}')
-  Future<User> updateUser(
+  Future<UserModel> updateUser(
     @Path('id') String id,
     @Body() UpdateUserRequest request,
   );
@@ -219,7 +289,7 @@ abstract class UserApi {
   Future<void> deleteUser(@Path('id') String id);
 
   @GET('/users')
-  Future<List<User>> searchUsers(
+  Future<List<UserModel>> searchUsers(
     @Query('q') String query,
     @Query('page') int page,
     @Query('limit') int limit,
@@ -227,33 +297,58 @@ abstract class UserApi {
 }
 ```
 
-### Model with `json_serializable`
+### Domain Entity (Freezed)
+
+```dart
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'user_entity.freezed.dart';
+
+@freezed
+class UserEntity with _$UserEntity {
+  const factory UserEntity({
+    required int id,
+    required String name,
+    required String email,
+    required DateTime createdAt,
+  }) = _UserEntity;
+}
+```
+
+### Data Model (JsonSerializable)
 
 ```dart
 import 'package:json_annotation/json_annotation.dart';
+import 'package:your_app/domain/entities/user_entity.dart';
 
-part 'user.g.dart';
+part 'user_model.g.dart';
 
-@JsonSerializable(explicitToJson: true)
-class User {
+@JsonSerializable()
+class UserModel {
   final int id;
   final String name;
-
   @JsonKey(name: 'email_address')
   final String email;
-
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
 
-  const User({
+  const UserModel({
     required this.id,
     required this.name,
     required this.email,
     required this.createdAt,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
-  Map<String, dynamic> toJson() => _$UserToJson(this);
+  factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
+  Map<String, dynamic> toJson() => _$UserModelToJson(this);
+
+  // Mapper to Domain Entity
+  UserEntity toEntity() => UserEntity(
+    id: id,
+    name: name,
+    email: email,
+    createdAt: createdAt,
+  );
 }
 ```
 
@@ -264,9 +359,10 @@ class UserRepository {
   final UserApi _api;
   UserRepository(this._api);
 
-  Future<List<User>> getUsers() async {
+  Future<List<UserEntity>> getUsers() async {
     try {
-      return await _api.getUsers();
+      final models = await _api.getUsers();
+      return models.map((m) => m.toEntity()).toList();
     } on DioException catch (e) {
       switch (e.type) {
         case DioExceptionType.connectionTimeout:
@@ -303,7 +399,7 @@ Future<UploadResponse> uploadFile(
 ```dart
 // Wrap return type in HttpResponse to access status code and headers
 @GET('/users/{id}')
-Future<HttpResponse<User>> getUserWithResponse(@Path('id') String id);
+Future<HttpResponse<UserModel>> getUserWithResponse(@Path('id') String id);
 
 // Usage
 final httpResponse = await api.getUserWithResponse('123');
@@ -320,6 +416,9 @@ print(httpResponse.data.name);           // User name
 - ❌ Missing `fromJson` factory on response models (Retrofit can't deserialize)
 - ❌ Catching `Exception` instead of `DioException` for network errors
 - ❌ Exposing `DioException` to the UI layer (map to domain exceptions)
+- ❌ Using `freezed` for Data Models (keep them simple with `json_serializable`)
+- ❌ Mixing API response structure directly into Domain Entities
+- ❌ Adding `fromJson`/`toJson` to Domain Entities (entities must remain data-agnostic)
 
 ## Resources
 
