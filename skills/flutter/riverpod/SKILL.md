@@ -1,24 +1,24 @@
 ---
 name: flutter-riverpod-pattern
-description: Implements state management in Flutter applications using Riverpod 2.x and Code Generation.
+description: Implements state management in Flutter applications using Riverpod 3.x and Code Generation.
 tags: [flutter, riverpod, state-management, providers]
 applies-to: [antigravity, cursor, copilot]
 level: project
 ---
 
-# Flutter Riverpod Pattern
+# Flutter Riverpod Pattern (3.x)
 
 ## Context
 
-Apply when creating or modifying state management using Riverpod in Flutter projects. We use Riverpod 2.x with code generation (`riverpod_annotation`).
+Apply when creating or modifying state management using Riverpod in Flutter projects. We use **Riverpod 3.x** with code generation (`riverpod_annotation`).
+
+> **3.0 Migration**: `AutoDisposeNotifier`, `FamilyNotifier`, and per-provider `Ref` subclasses (`ExampleRef`, `FutureProviderRef`) are removed — use `Notifier` and `Ref` everywhere. `StateProvider`/`StateNotifierProvider`/`ChangeNotifierProvider` moved to `package:riverpod/legacy.dart`.
 
 ## Instructions
 
-1. **Code Generation**: Always use `@riverpod` and `riverpod_annotation`. Avoid manually writing `Provider`, `FutureProvider`, etc.
-2. **State classes**: Use `freezed` for complex states to benefit from deep equality, or rely on `AsyncValue` for asynchronous operations.
-3. **Naming convention**:
-   - Class: `FeatureName` extending `_$FeatureName`
-   - File: `feature_name_provider.dart`
+1. **Code Generation**: Always use `@riverpod` and `riverpod_annotation`. Never manually write `Provider`, `FutureProvider`, etc.
+2. **State classes**: Use `freezed` for complex states, or `AsyncValue` for async operations.
+3. **Naming**: Class `FeatureName` extending `_$FeatureName`, file `feature_name_provider.dart`.
 4. **File structure**:
    ```text
    feature_name/
@@ -29,157 +29,209 @@ Apply when creating or modifying state management using Riverpod in Flutter proj
    └── widgets/
        └── ...
    ```
-5. **Never** put business logic in widgets — always delegate to the Riverpod Notifier.
-6. **Use** `ConsumerWidget` or `ConsumerStatefulWidget` instead of `StatelessWidget` / `StatefulWidget`.
-7. **Error handling**: Rely on `AsyncValue.guard()` to catch exceptions and automatically emit `AsyncError`.
+5. **Never** put business logic in widgets — delegate to Notifiers.
+6. **Use** `ConsumerWidget` or `ConsumerStatefulWidget`.
+7. **Error handling**: Use `AsyncValue.guard()` for async error handling.
+8. **Unified Ref**: Always use `Ref` in code-gen — not `ExampleRef` or typed variants.
+   ```dart
+   @riverpod
+   Example example(Ref ref) => Example(); // ✅ 3.x
+   // Example example(ExampleRef ref) => Example(); // ❌ 2.x removed
+   ```
 
 ## Provider Lifecycle
 
-### 1. Global Singleton (`keepAlive: true`)
-Use `keepAlive: true` for providers that should never be disposed, such as API clients, repositories, or local databases.
+### Global Singleton (`keepAlive: true`)
 ```dart
 @Riverpod(keepAlive: true)
 class UserRepository extends _$UserRepository {
   @override
-  FutureOr<void> build() {
-    // Initialization logic
-  }
+  FutureOr<void> build() { /* init */ }
 }
 ```
 
-### 2. autoDispose (Default)
-By default, providers are `autoDispose`. This is preferred for UI states (lists, details, search results) to free up memory when no longer used.
+### autoDispose (Default)
 ```dart
 @riverpod
 class TaskList extends _$TaskList {
   @override
   FutureOr<List<Task>> build() async {
-    final repo = ref.watch(userRepositoryProvider.notifier);
-    return repo.fetchTasks();
+    return ref.watch(userRepositoryProvider.notifier).fetchTasks();
   }
 }
 ```
 
+### `Ref.mounted` — Safety after async gaps
+Riverpod 3.0 throws if you interact with a disposed Ref/Notifier. Always check after async:
+```dart
+Future<void> addTodo(String title) async {
+  final newTodo = await api.addTodo(title);
+  if (!ref.mounted) return; // Must check after await
+  state = [...state, newTodo];
+}
+```
+
+## Automatic Retry
+
+Providers auto-retry on failure (200ms exponential backoff up to 6.4s). Configure globally or per-provider:
+
+```dart
+// Global
+ProviderScope(
+  retry: (retryCount, error) {
+    if (error is ProviderException) return null;
+    if (retryCount > 5) return null;
+    return Duration(seconds: retryCount * 2);
+  },
+  child: MyApp(),
+);
+
+// Per-provider
+Duration? myRetry(int retryCount, Object error) => retryCount > 3 ? null : Duration(seconds: retryCount * 2);
+
+@Riverpod(retry: myRetry)
+class TodoList extends _$TodoList {
+  @override
+  List<Todo> build() => [];
+}
+```
+
+## Mutations (Experimental)
+
+React to side-effects with loading/success/error states. Prevents disposal during in-flight operations:
+
+```dart
+final addTodoMutation = Mutation<void>();
+
+class AddTodoButton extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final addTodo = ref.watch(addTodoMutation);
+    return switch (addTodo) {
+      MutationIdle() => ElevatedButton(
+          onPressed: () => addTodoMutation.run(ref, (tsx) async {
+            await tsx.get(todoListProvider.notifier).addTodo('New Todo');
+          }),
+          child: const Text('Submit'),
+        ),
+      MutationPending() => const CircularProgressIndicator(),
+      MutationError() => const Text('Failed'),
+      MutationSuccess() => const Text('Done!'),
+    };
+  }
+}
+```
+
+> Use `tsx.get()` instead of `ref.read()` — keeps provider alive until mutation completes.
+
+## Offline Persistence (Experimental)
+
+```dart
+@riverpod
+@JsonPersist()
+class TodosNotifier extends _$TodosNotifier {
+  @override
+  FutureOr<List<Todo>> build() async {
+    persist(ref.watch(storageProvider.future));
+    return await fetchTodos();
+  }
+}
+```
+
+## AsyncValue (Sealed in 3.0)
+
+Exhaustive pattern matching, renamed `valueOrNull` → `value`, progress support:
+
+```dart
+return switch (ref.watch(myProvider)) {
+  AsyncData(:final value) => Text('$value'),
+  AsyncError(:final error) => Text('Error: $error'),
+  AsyncLoading(:final progress) => LinearProgressIndicator(value: progress),
+};
+```
+
+- `AsyncValue.isFromCache` — true when from offline persistence
+- `AsyncLoading(progress: 0.5)` — optional progress reporting
 
 ## UI Performance & Optimization
 
-To ensure smooth UI and minimize unnecessary rebuilds, follow these optimization patterns:
-
 ### 1. Selective Rebuilds (`ref.select`)
-When watching a provider that returns a complex object, use `.select` to watch only the specific field you need. The widget will only rebuild if *that specific field* changes.
-
 ```dart
-// ❌ BAD: Rebuilds when ANY part of user changes
-final user = ref.watch(userProvider);
-return Text(user.name);
-
-// ✅ GOOD: Rebuilds ONLY when name changes
-final name = ref.watch(userProvider.select((u) => u.name));
-return Text(name);
+final name = ref.watch(userProvider.select((u) => u.name)); // Only rebuilds on name change
 ```
 
 ### 2. Granular Rebuilds (`Consumer`)
-Instead of putting `ref.watch` at the top of a large `build` method, wrap only the small part of the UI that needs the state in a `Consumer` widget.
-
 ```dart
-Widget build(BuildContext context, WidgetRef ref) {
-  // This scaffold and its static parts won't rebuild
-  return Scaffold(
-    appBar: AppBar(title: const Text('Settings')),
-    body: Column(
-      children: [
-        const StaticHeader(), // Never rebuilds
-        Consumer(
-          builder: (context, ref, child) {
-            // Only this text rebuilds when the state changes
-            final themeMode = ref.watch(settingsProvider.select((s) => s.themeMode));
-            return Text('Current mode: $themeMode');
-          },
-        ),
-      ],
-    ),
-  );
-}
+Consumer(
+  builder: (context, ref, child) {
+    final themeMode = ref.watch(settingsProvider.select((s) => s.themeMode));
+    return Text('Current mode: $themeMode');
+  },
+)
 ```
 
-### 3. Side Effects without Rebuilds (`ref.listen`)
-Use `ref.listen` for actions like showing snackbars, navigating, or showing dialogs. It reacts to state changes without triggering a build of the widget where it's used.
-
+### 3. Side Effects (`ref.listen`)
 ```dart
-@override
-Widget build(BuildContext context, WidgetRef ref) {
-  ref.listen(authNotifierProvider, (previous, next) {
-    if (next is AsyncError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(next.error.toString())),
-      );
-    }
-  });
-  
-  return const LoginForm();
-}
-```
-
-### 4. Optimization for Lists
-Avoid watching an entire list in every list item widget, as this causes all items to rebuild when the list changes. Instead, use a family provider to watch a specific item by its ID.
-
-```dart
-@riverpod
-Task individualTask(IndividualTaskRef ref, String taskId) {
-  final allTasks = ref.watch(taskListProvider).value ?? [];
-  return allTasks.firstWhere((t) => t.id == taskId);
-}
-
-// In Widget Item:
-// final task = ref.watch(individualTaskProvider(id));
-```
-
-
-## Examples
-
-### Optimized AsyncNotifier
-
-```dart
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-part 'user_profile_provider.g.dart';
-
-@riverpod
-class UserProfile extends _$UserProfile {
-  @override
-  FutureOr<User> build(String userId) async {
-    final repo = ref.watch(userRepositoryProvider);
-    return repo.getUser(userId);
+ref.listen(authProvider, (previous, next) {
+  if (next is AsyncError) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$next')));
   }
-  // ... methods
-}
-
-### Using AsyncValue.guard
-Use `AsyncValue.guard` to wrap asynchronous operations. It automatically catches errors and converts them into `AsyncError`.
-
-```dart
-Future<void> addTask(String title) async {
-  state = const AsyncLoading();
-  state = await AsyncValue.guard(() async {
-    final newTask = await repo.createNewTask(title);
-    return [...state.value!, newTask];
-  });
-}
+});
 ```
 
+### 4. Pause/Resume & Weak Listeners
+Invisible widget listeners are auto-paused via `TickerMode`. Manual control:
+```dart
+final sub = ref.listen(provider, (prev, next) {});
+sub.pause();
+sub.resume();
+
+// Weak: listen without preventing auto-dispose
+ref.listen(provider, weak: true, (prev, next) {});
+```
+
+### 5. List Optimization (Family)
+```dart
+@riverpod
+Task individualTask(Ref ref, String taskId) {
+  return ref.watch(taskListProvider).value!.firstWhere((t) => t.id == taskId);
+}
+// Widget: ref.watch(individualTaskProvider(id))
+```
+
+## Testing
+
+```dart
+// Auto-disposing container
+final container = ProviderContainer.test();
+
+// Mock only build method
+myProvider.overrideWithBuild((ref) => 42);
+
+// Override with value
+myFutureProvider.overrideWithValue(AsyncValue.data(42));
+
+// Widget test container access
+ProviderContainer container = tester.container();
 ```
 
 ## Anti-patterns
 
-- ❌ **Massive Rebuilds**: Watching a global "AppState" object at the root of a page without `.select`.
-- ❌ **Logic in build**: Performing complex calculations or filtering inside `build()`. Move these to a computed provider using `ref.watch`.
-- ❌ **Missing const**: Not using `const` constructors for widgets that don't depend on providers.
-- ❌ **Passing ref**: Passing `WidgetRef` as a parameter to child widgets instead of using `Consumer`.
-- ❌ **Manual rebuilds**: Using `setState` in a `ConsumerStatefulWidget` for data that should be in a provider.
+- ❌ Watching global state without `.select`
+- ❌ Business logic in `build()` — use computed providers
+- ❌ Missing `const` constructors for static widgets
+- ❌ Passing `WidgetRef` to child widgets — use `Consumer`
+- ❌ Using `setState` for provider-managed data
+- ❌ Using legacy providers (`StateProvider`, etc.) in new code
+- ❌ Using typed Ref (`ExampleRef`) — use `Ref`
+- ❌ Ignoring `ref.mounted` after async gaps
 
 ## Resources
 
-- https://riverpod.dev/docs/concepts/about_code_generation
-- https://riverpod.dev/docs/concepts/reading#using-select-to-filter-rebuilds
-- https://riverpod.dev/docs/concepts/modifiers/family
+- https://riverpod.dev/docs/whats_new
+- https://riverpod.dev/docs/3.0_migration
+- https://riverpod.dev/docs/concepts2/providers
+- https://riverpod.dev/docs/concepts2/mutations
+- https://riverpod.dev/docs/concepts2/offline
+- https://riverpod.dev/docs/concepts2/retry
 - https://pub.dev/packages/riverpod_annotation
