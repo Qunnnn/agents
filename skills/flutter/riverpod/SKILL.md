@@ -33,6 +33,34 @@ Apply when creating or modifying state management using Riverpod in Flutter proj
 6. **Use** `ConsumerWidget` or `ConsumerStatefulWidget` instead of `StatelessWidget` / `StatefulWidget`.
 7. **Error handling**: Rely on `AsyncValue.guard()` to catch exceptions and automatically emit `AsyncError`.
 
+## Provider Lifecycle
+
+### 1. Global Singleton (`keepAlive: true`)
+Use `keepAlive: true` for providers that should never be disposed, such as API clients, repositories, or local databases.
+```dart
+@Riverpod(keepAlive: true)
+class UserRepository extends _$UserRepository {
+  @override
+  FutureOr<void> build() {
+    // Initialization logic
+  }
+}
+```
+
+### 2. autoDispose (Default)
+By default, providers are `autoDispose`. This is preferred for UI states (lists, details, search results) to free up memory when no longer used.
+```dart
+@riverpod
+class TaskList extends _$TaskList {
+  @override
+  FutureOr<List<Task>> build() async {
+    final repo = ref.watch(userRepositoryProvider.notifier);
+    return repo.fetchTasks();
+  }
+}
+```
+
+
 ## UI Performance & Optimization
 
 To ensure smooth UI and minimize unnecessary rebuilds, follow these optimization patterns:
@@ -93,7 +121,19 @@ Widget build(BuildContext context, WidgetRef ref) {
 ```
 
 ### 4. Optimization for Lists
-When displaying a list, avoid watching the entire list in every list item. Pass the item itself or its ID/index to the item widget, or use a provider that returns just that specific item.
+Avoid watching an entire list in every list item widget, as this causes all items to rebuild when the list changes. Instead, use a family provider to watch a specific item by its ID.
+
+```dart
+@riverpod
+Task individualTask(IndividualTaskRef ref, String taskId) {
+  final allTasks = ref.watch(taskListProvider).value ?? [];
+  return allTasks.firstWhere((t) => t.id == taskId);
+}
+
+// In Widget Item:
+// final task = ref.watch(individualTaskProvider(id));
+```
+
 
 ## Examples
 
@@ -113,6 +153,20 @@ class UserProfile extends _$UserProfile {
   }
   // ... methods
 }
+
+### Using AsyncValue.guard
+Use `AsyncValue.guard` to wrap asynchronous operations. It automatically catches errors and converts them into `AsyncError`.
+
+```dart
+Future<void> addTask(String title) async {
+  state = const AsyncLoading();
+  state = await AsyncValue.guard(() async {
+    final newTask = await repo.createNewTask(title);
+    return [...state.value!, newTask];
+  });
+}
+```
+
 ```
 
 ## Anti-patterns
