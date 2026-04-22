@@ -60,15 +60,16 @@ Or ask: "This branch split from main — is that correct?"
 
 ### Step 3: Present Options
 
-Present exactly these 4 options:
+Present exactly these 5 options:
 
 ```
 Implementation complete. What would you like to do?
 
-1. Merge back to <base-branch> locally
+1. Merge back to <base-branch> locally (includes deleting plan/spec/task files)
 2. Push and create a Pull Request
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
+5. Just cleanup artifacts (delete plan/spec/task files)
 
 Which option?
 ```
@@ -94,6 +95,9 @@ flutter test
 
 # If tests pass
 git branch -d <feature-branch>
+
+# Cleanup artifacts (if any)
+rm -f docs/plans/*.md docs/specs/*.md task.md
 ```
 
 #### Option 2: Push and Create PR
@@ -139,6 +143,13 @@ git checkout <base-branch>
 git branch -D <feature-branch>
 ```
 
+#### Option 5: Just Cleanup Artifacts
+
+```bash
+# Cleanup artifacts (if any)
+rm -f docs/plans/*.md docs/specs/*.md task.md
+```
+
 ## Quick Reference
 
 | Option | Merge | Push | Cleanup Branch |
@@ -147,6 +158,7 @@ git branch -D <feature-branch>
 | 2. Create PR | - | ✓ | - |
 | 3. Keep as-is | - | - | - |
 | 4. Discard | - | - | ✓ (force) |
+| 5. Just cleanup | - | - | - |
 
 ## Common Mistakes
 
@@ -160,7 +172,7 @@ git branch -D <feature-branch>
 
 **Open-ended questions**
 - **Problem:** "What should I do next?" → ambiguous
-- **Fix:** Present exactly 4 structured options
+- **Fix:** Present exactly 5 structured options
 
 **No confirmation for discard**
 - **Problem:** Accidentally delete work
@@ -177,7 +189,7 @@ git branch -D <feature-branch>
 
 **Always:**
 - Run full Flutter verification suite before offering options
-- Present exactly 4 options
+- Present exactly 5 options
 - Get typed confirmation for Option 4
 
 ## Integration
