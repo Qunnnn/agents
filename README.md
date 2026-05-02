@@ -7,7 +7,8 @@
 ```
 .
 ├── skills/                    # Reusable skill instructions
-│   ├── flutter/               # Flutter/Dart specific skills
+│   ├── dart/                  # Dart core skills (from dart-lang/skills)
+│   ├── flutter/               # Flutter-specific skills
 │   ├── go/                    # Go/Backend specific skills
 │   ├── general/               # Language-agnostic skills
 │   └── devops/                # CI/CD, Docker, deployment skills
@@ -96,3 +97,7 @@ level: [project, file, snippet]
 ## 📄 License
 
 Personal use. Feel free to fork and customize for your own workflow.
+
+## 🤝 Credits & Resources
+
+- [dart-lang/skills](https://github.com/dart-lang/skills) - Official Dart Agent Skills maintained by the Dart team.
