@@ -90,6 +90,138 @@ BlocBuilder<UserProfileCubit, UserProfileState>(
 )
 ```
 
+## Form Management (Reactive Forms)
+
+When using `reactive_forms` with BLoC/Cubit, you can manage the `FormGroup` within the **Cubit** to centralize validation and business logic.
+
+### Implementation Pattern (Cubit-Managed)
+
+1.  **Initialize**: Define and initialize the `FormGroup` as a `late final` property in the Cubit.
+2.  **Dispose**: Override the `close()` method in the Cubit to dispose of the form.
+3.  **Access**: The widget retrieves the form via `context.read<MyCubit>().form`.
+4.  **Action**: Create a method in the Cubit that validates the form and performs the business logic.
+
+```dart
+// Cubit
+class LoginCubit extends Cubit<LoginState> {
+  LoginCubit(this._repo) : super(const LoginState()) {
+    // 1. Initialize form
+    form = fb.group({
+      'email': ['', Validators.required, Validators.email],
+      'password': ['', Validators.required],
+    });
+  }
+
+  final AuthRepository _repo;
+  late final FormGroup form;
+
+  // 2. Dispose form
+  @override
+  Future<void> close() {
+    form.dispose();
+    return super.close();
+  }
+
+  Future<void> login() async {
+    if (form.invalid) {
+      form.markAllAsTouched();
+      return;
+    }
+
+    emit(state.copyWith(status: ApiStatus.loading));
+    try {
+      await _repo.login(
+        email: form.control('email').value,
+        password: form.control('password').value,
+      );
+      emit(state.copyWith(status: ApiStatus.success));
+    } catch (e) {
+      emit(state.copyWith(status: ApiStatus.error, errorMessage: e.toString()));
+    }
+  }
+}
+
+### Implementation Pattern (Bloc-Managed)
+
+For event-driven flows, the form remains in the Bloc, and actions are triggered by events.
+
+```dart
+// Bloc
+class LoginBloc extends Bloc<LoginEvent, LoginState> {
+  LoginBloc(this._repo) : super(const LoginState()) {
+    on<LoginSubmitted>(_onSubmitted);
+    
+    // 1. Initialize form
+    form = fb.group({
+      'email': ['', Validators.required, Validators.email],
+      'password': ['', Validators.required],
+    });
+  }
+
+  final AuthRepository _repo;
+  late final FormGroup form;
+
+  // 2. Dispose form
+  @override
+  Future<void> close() {
+    form.dispose();
+    return super.close();
+  }
+
+  Future<void> _onSubmitted(LoginSubmitted event, Emitter<LoginState> emit) async {
+    if (form.invalid) {
+      form.markAllAsTouched();
+      return;
+    }
+
+    emit(state.copyWith(status: ApiStatus.loading));
+    try {
+      await _repo.login(
+        email: form.control('email').value,
+        password: form.control('password').value,
+      );
+      emit(state.copyWith(status: ApiStatus.success));
+    } catch (e) {
+      emit(state.copyWith(status: ApiStatus.error, errorMessage: e.toString()));
+    }
+  }
+}
+```
+
+// Widget
+class LoginPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<LoginCubit>();
+    
+    return BlocListener<LoginCubit, LoginState>(
+      listener: (context, state) {
+        if (state.status == ApiStatus.success) context.pop();
+      },
+      child: ReactiveForm(
+        formGroup: cubit.form, // 3. Access form from cubit
+        child: Column(
+          children: [
+            ReactiveTextField(formControlName: 'email'),
+            ReactiveTextField(formControlName: 'password', obscureText: true),
+            const SizedBox(height: 20),
+            BlocBuilder<LoginCubit, LoginState>(
+              builder: (context, state) {
+                final isLoading = state.status == ApiStatus.loading;
+                return ElevatedButton(
+                  onPressed: isLoading ? null : cubit.login, // 4. Call cubit method
+                  child: isLoading ? const CircularProgressIndicator() : const Text('Login'),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
 ## Anti-patterns
 
 - ❌ Emitting states from widgets directly

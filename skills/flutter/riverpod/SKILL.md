@@ -153,6 +153,50 @@ return switch (ref.watch(myProvider)) {
 - `AsyncValue.isFromCache` — true when from offline persistence
 - `AsyncLoading(progress: 0.5)` — optional progress reporting
 
+## Form Management (Reactive Forms)
+
+When handling forms, encapsulate the `FormGroup` within the `Action Notifier`. This keeps validation logic out of the UI and ensures the form state is disposed of correctly.
+
+### Implementation Pattern
+1. **Initialize**: Create the `FormGroup` in the `build()` method.
+2. **Dispose**: Register `form.dispose` in `ref.onDispose`.
+3. **Validate**: Perform validation before executing side effects.
+4. **Access**: Retrieve values directly from the form controls.
+
+```dart
+@riverpod
+class LoginNotifier extends _$LoginNotifier {
+  late final FormGroup form;
+
+  @override
+  FutureOr<void> build() {
+    form = fb.group({
+      'email': ['', Validators.required, Validators.email],
+      'password': ['', Validators.required],
+    });
+
+    // Ensure form is disposed when provider is disposed
+    ref.onDispose(form.dispose);
+  }
+
+  Future<void> login() async {
+    if (form.invalid) {
+      form.markAllAsTouched();
+      return;
+    }
+
+    state = const AsyncValue.loading();
+    // Use form.control('name').value to get data
+    final result = await ref.read(authRepositoryProvider).login(
+      email: form.control('email').value,
+      password: form.control('password').value,
+    );
+    
+    // ... handle result
+  }
+}
+```
+
 ## UI Performance & Optimization
 
 ### 1. Selective Rebuilds (`ref.select`)
